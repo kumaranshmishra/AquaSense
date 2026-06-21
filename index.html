@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Aqua Sense - Real-time river water quality monitoring system with IoT sensors" />
+  <title>Aqua Sense — Smart Water Monitoring</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <link rel="manifest" href="/manifest.json">
+</head>
+<body>
+  <!-- Mobile Menu Toggle Button -->
+<button class="menu-toggle" id="menuToggle">☰</button>
+
+<!-- Sidebar Overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- Particle Canvas Background -->
+  <canvas id="particleCanvas" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0;"></canvas>
+
+  <!-- Sidebar - Device Management Panel -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">📡</div>
+      <h3>Devices</h3>
+      <button class="sidebar-toggle" id="sidebarToggle">◀</button>
+    </div>
+    
+    <div class="device-stats">
+      <div class="device-stat">
+        <span class="stat-value" id="totalDevices">1</span>
+        <span class="stat-label">Active</span>
+      </div>
+      <div class="device-stat">
+        <span class="stat-value" id="onlineDevices">0</span>
+        <span class="stat-label">Online</span>
+      </div>
+    </div>
+    
+    <div class="device-search">
+      <input type="text" id="deviceSearch" placeholder="🔍 Search devices..." class="search-input">
+    </div>
+    
+    <div class="device-list" id="deviceList">
+      <!-- Devices will appear here dynamically -->
+    </div>
+    
+    <div class="sidebar-footer">
+      <button class="add-device-btn" id="addDeviceBtn">
+        <span>+</span> Add New Device
+      </button>
+      <button class="scan-devices-btn" id="scanDevicesBtn">
+        🔍 Scan Ports
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content Wrapper -->
+  <div class="main-content" id="mainContent">
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+      <div class="nav-brand">
+        <div class="brand-icon">💧</div>
+        <span>Aqua<span class="brand-accent">Sense</span></span>
+      </div>
+      <ul class="nav-links">
+        <li><a href="#hero" class="nav-link active">Home</a></li>
+        <li><a href="#analytics" class="nav-link">Analytics</a></li>
+        <li><a href="#about" class="nav-link">About</a></li>
+      </ul>
+      <div class="nav-actions">
+        <div class="active-device" id="activeDeviceDisplay">
+          <span class="device-icon">📟</span>
+          <span id="activeDeviceName">No Device</span>
+        </div>
+        <div class="live-clock" id="liveClock"></div>
+        <div class="live-badge">
+          <span class="live-dot"></span>LIVE
+        </div>
+        <button class="compare-btn" id="openComparisonBtn">📊 Compare</button>
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark/light theme">
+          <span class="theme-icon">☀️</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="hero" class="hero">
+      <div class="hero-content">
+        <div class="hero-badge">Multi-Device IoT Network</div>
+        <h1 class="hero-title">
+          <span class="title-line">AQUA</span>
+          <span class="title-line accent">SENSE</span>
+        </h1>
+        <p class="hero-tagline">Centralized Water Quality Monitoring</p>
+        <p class="hero-desc">
+          Manage multiple Arduino sensors from one dashboard. Switch between devices,
+          compare data, and monitor water quality across different locations in real-time.
+        </p>
+        <div class="hero-cta">
+          <a href="#analytics" class="btn-primary">View Analytics</a>
+          <button class="btn-ghost" id="showDevicesBtn">Manage Devices</button>
+        </div>
+        <div class="hero-stats">
+          <div class="stat"><span class="stat-num" id="statSensors">24</span><span class="stat-lbl">Total Sensors</span></div>
+          <div class="stat-divider"></div>
+          <div class="stat"><span class="stat-num" id="statLocations">6</span><span class="stat-lbl">Locations</span></div>
+          <div class="stat-divider"></div>
+          <div class="stat"><span class="stat-num" id="statUptime">99.8%</span><span class="stat-lbl">Uptime</span></div>
+        </div>
+      </div>
+
+      <!-- Animated Wave Layers -->
+      <div class="wave-container">
+        <svg class="wave wave1" viewBox="0 0 1440 320" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0,160L60,149.3C120,139,240,117,360,128C480,139,600,181,720,186.7C840,192,960,160,1080,138.7C1200,117,1320,107,1380,101.3L1440,96L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"></path>
+        </svg>
+        <svg class="wave wave2" viewBox="0 0 1440 320" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0,224L48,213.3C96,203,192,181,288,165.3C384,149,480,139,576,154.7C672,171,768,213,864,208C960,203,1056,149,1152,133.3C1248,117,1344,139,1392,149.3L1440,160L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+        </svg>
+        <svg class="wave wave3" viewBox="0 0 1440 320" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0,256L60,240C120,224,240,192,360,186.7C480,181,600,203,720,218.7C840,235,960,245,1080,229.3C1200,213,1320,171,1380,149.3L1440,128L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"></path>
+        </svg>
+      </div>
+    </section>
+
+    <!-- Analytics Section -->
+    <section id="analytics" class="analytics-section">
+      <div class="section-header">
+        <h2 class="section-title">Real-Time Analytics</h2>
+        <p class="section-sub" id="currentDeviceSubtitle">Live sensor data from active device</p>
+        <div class="refresh-info">
+          <span class="refresh-icon" aria-hidden="true">🔄</span>
+          Auto-refreshing every <strong>2s</strong> &nbsp;|&nbsp;
+          Last update: <span id="lastUpdate">—</span>
+        </div>
+      </div>
+
+      <!-- Alert Container -->
+      <div id="alertContainer" class="alert-container"></div>
+
+      <!-- Status Banner -->
+      <div class="status-banner" id="statusBanner" role="alert">
+        <span class="status-icon" id="statusIcon" aria-hidden="true">✅</span>
+        <span id="statusText">All parameters within safe limits</span>
+      </div>
+
+      <!-- Loading Overlay -->
+      <div class="loading-overlay" id="loadingOverlay" aria-hidden="false">
+        <div class="water-loader">
+          <div class="loader-drop"></div>
+          <p>Connecting to Arduino sensors...</p>
+        </div>
+      </div>
+
+      <!-- Current Readings Cards -->
+      <div class="current-readings">
+        <h3 class="readings-title">Current Readings</h3>
+        <div class="compact-cards">
+          <div class="compact-card" id="card-ph">
+            <div class="compact-icon">⚗️</div>
+            <div class="compact-info">
+              <span class="compact-label">pH Level</span>
+              <span class="compact-value" id="val-ph">—</span>
+              <span class="compact-unit">pH</span>
+            </div>
+            <div class="status-badge-small safe" id="badge-ph">SAFE</div>
+          </div>
+          <div class="compact-card" id="card-turbidity">
+            <div class="compact-icon">🌊</div>
+            <div class="compact-info">
+              <span class="compact-label">Turbidity</span>
+              <span class="compact-value" id="val-turbidity">—</span>
+              <span class="compact-unit">NTU</span>
+            </div>
+            <div class="status-badge-small safe" id="badge-turbidity">SAFE</div>
+          </div>
+          <div class="compact-card" id="card-tds">
+            <div class="compact-icon">🧪</div>
+            <div class="compact-info">
+              <span class="compact-label">TDS</span>
+              <span class="compact-value" id="val-tds">—</span>
+              <span class="compact-unit">ppm</span>
+            </div>
+            <div class="status-badge-small safe" id="badge-tds">SAFE</div>
+          </div>
+          <div class="compact-card" id="card-temp">
+            <div class="compact-icon">🌡️</div>
+            <div class="compact-info">
+              <span class="compact-label">Temperature</span>
+              <span class="compact-value" id="val-temp">—</span>
+              <span class="compact-unit">°C</span>
+            </div>
+            <div class="status-badge-small safe" id="badge-temp">SAFE</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Water Quality Index Panel -->
+      <div class="wqi-panel">
+        <div class="wqi-left">
+          <h3 class="wqi-title">Water Quality Index (WQI)</h3>
+          <p class="wqi-desc">Composite score based on all sensor readings</p>
+          <div class="wqi-score-wrap">
+            <div class="wqi-ring" id="wqiRing">
+              <svg viewBox="0 0 120 120" aria-label="Water Quality Index gauge">
+                <circle cx="60" cy="60" r="50" class="ring-bg"/>
+                <circle cx="60" cy="60" r="50" class="ring-fill" id="ringFill"
+                  stroke-dasharray="314" stroke-dashoffset="314"/>
+              </svg>
+              <div class="wqi-center">
+                <span class="wqi-num" id="wqiNum">—</span>
+                <span class="wqi-label" id="wqiLabel">Loading</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="wqi-right">
+          <div class="wqi-legend">
+            <div class="leg-item"><span class="leg-dot" style="background:#00ff9d"></span>Excellent (90–100)</div>
+            <div class="leg-item"><span class="leg-dot" style="background:#00d4ff"></span>Good (70–89)</div>
+            <div class="leg-item"><span class="leg-dot" style="background:#ffd700"></span>Moderate (50–69)</div>
+            <div class="leg-item"><span class="leg-dot" style="background:#ff6b35"></span>Poor (25–49)</div>
+            <div class="leg-item"><span class="leg-dot" style="background:#ff2d55"></span>Very Poor (0–24)</div>
+          </div>
+          <div class="api-status" id="apiStatus">
+            <span class="api-dot" id="apiDot"></span>
+            <span id="apiMsg">Waiting for Arduino data...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Animated Gauge Addition -->
+      <div class="gauge-addition">
+        <div class="gauge-header">
+          <h3 class="gauge-title">🎯 Real-time Quality Score</h3>
+          <p class="gauge-subtitle">Dynamic visualization of water health</p>
+        </div>
+        <div class="gauge-container">
+          <canvas id="wqiGaugeCanvas" width="180" height="180"></canvas>
+          <div class="gauge-stats">
+            <div class="gauge-stat">
+              <span class="gauge-stat-value" id="gaugeTrend">+0%</span>
+              <span class="gauge-stat-label">vs last hour</span>
+            </div>
+            <div class="gauge-stat">
+              <span class="gauge-stat-value" id="gaugePeak">—</span>
+              <span class="gauge-stat-label">peak today</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Water Level Visualization -->
+      <div class="water-level-panel">
+        <h3>💧 Water Quality Status</h3>
+        <div class="water-tank">
+          <div class="water-fill" id="waterFill">
+            <div class="water-wave"></div>
+          </div>
+        </div>
+        <div class="water-stats">
+          <div>Quality Score: <span id="waterQuality">—</span>%</div>
+          <div>Health Status: <span id="healthScore">—</span></div>
+        </div>
+      </div>
+
+      <!-- Graph Controls -->
+      <div class="graph-controls">
+        <button class="graph-btn active" data-graph="all">All Parameters</button>
+        <button class="graph-btn" data-graph="ph">pH Level</button>
+        <button class="graph-btn" data-graph="turbidity">Turbidity</button>
+        <button class="graph-btn" data-graph="tds">TDS</button>
+        <button class="graph-btn" data-graph="temperature">Temperature</button>
+        <button class="graph-btn" data-graph="wqi">Water Quality Index</button>
+      </div>
+      <div class="graph-timeframe">
+        <button class="time-btn active" data-time="30">Last 30 Readings</button>
+        <button class="time-btn" data-time="60">Last 60 Readings</button>
+        <button class="time-btn" data-time="120">Last 120 Readings</button>
+        <button class="time-btn" data-time="all">All History</button>
+      </div>
+
+      <!-- Main Graph Container -->
+      <div class="main-graph-container">
+        <canvas id="mainGraph" width="800" height="400" style="max-width: 100%; height: auto;"></canvas>
+      </div>
+
+      <!-- Individual Parameter Graphs -->
+      <div class="individual-graphs">
+        <div class="indiv-graph-card">
+          <h3>pH Level Trend</h3>
+          <canvas id="graph-ph" width="400" height="200"></canvas>
+          <div class="graph-stats">
+            <span>Min: <span id="ph-min">—</span></span>
+            <span>Max: <span id="ph-max">—</span></span>
+            <span>Avg: <span id="ph-avg">—</span></span>
+          </div>
+        </div>
+        <div class="indiv-graph-card">
+          <h3>Turbidity Trend (NTU)</h3>
+          <canvas id="graph-turbidity" width="400" height="200"></canvas>
+          <div class="graph-stats">
+            <span>Min: <span id="turbidity-min">—</span></span>
+            <span>Max: <span id="turbidity-max">—</span></span>
+            <span>Avg: <span id="turbidity-avg">—</span></span>
+          </div>
+        </div>
+        <div class="indiv-graph-card">
+          <h3>TDS Trend (ppm)</h3>
+          <canvas id="graph-tds" width="400" height="200"></canvas>
+          <div class="graph-stats">
+            <span>Min: <span id="tds-min">—</span></span>
+            <span>Max: <span id="tds-max">—</span></span>
+            <span>Avg: <span id="tds-avg">—</span></span>
+          </div>
+        </div>
+        <div class="indiv-graph-card">
+          <h3>Temperature Trend (°C)</h3>
+          <canvas id="graph-temperature" width="400" height="200"></canvas>
+          <div class="graph-stats">
+            <span>Min: <span id="temp-min">—</span></span>
+            <span>Max: <span id="temp-max">—</span></span>
+            <span>Avg: <span id="temp-avg">—</span></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="about">
+      <div class="section-header">
+        <h2 class="section-title">About Aqua Sense</h2>
+        <p class="section-sub">How it works — from multiple devices to real-time insights</p>
+      </div>
+
+      <div class="about-grid">
+        <div class="about-card">
+          <div class="about-icon" aria-hidden="true">📡</div>
+          <h3>Multi-Device Network</h3>
+          <p>Connect multiple Arduino sensors across different locations. Each device has its own data stream and can be monitored independently.</p>
+        </div>
+        <div class="about-card">
+          <div class="about-icon" aria-hidden="true">🐍</div>
+          <h3>Centralized Backend</h3>
+          <p>Flask server manages multiple serial connections, aggregates data from all devices, and serves unified API endpoints.</p>
+        </div>
+        <div class="about-card">
+          <div class="about-icon" aria-hidden="true">📊</div>
+          <h3>Device Management</h3>
+          <p>Easily add, remove, and switch between devices. Each device maintains its own history and can be configured independently.</p>
+        </div>
+        <div class="about-card">
+          <div class="about-icon" aria-hidden="true">🌿</div>
+          <h3>Scalable Solution</h3>
+          <p>From one sensor to hundreds, Aqua Sense scales with your monitoring needs. Perfect for river networks and industrial applications.</p>
+        </div>
+      </div>
+
+      <div class="tech-stack">
+        <h3 class="stack-title">Technology Stack</h3>
+        <div class="stack-items">
+          <div class="stack-chip">Python 3.11</div>
+          <div class="stack-chip">Flask</div>
+          <div class="stack-chip">Multi-Device Support</div>
+          <div class="stack-chip">WebSockets</div>
+          <div class="stack-chip">Chart.js</div>
+          <div class="stack-chip">Arduino</div>
+          <div class="stack-chip">Serial Communication</div>
+          <div class="stack-chip">Real-time Analytics</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="footer-brand">💧 Aqua<span class="brand-accent">Sense</span></div>
+        <p class="footer-copy">© 2025 Aqua Sense — Smart River Monitoring System. Built for a sustainable future.</p>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Device Modal for Adding/Editing -->
+  <div class="modal" id="deviceModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle">Add New Device</h3>
+        <button class="modal-close" id="closeModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Device Name</label>
+          <input type="text" id="deviceName" placeholder="e.g., Ganges Station A" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>Location</label>
+          <input type="text" id="deviceLocation" placeholder="e.g., Varanasi, India" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>Serial Port</label>
+          <select id="devicePort" class="form-input">
+            <option value="">Auto-detect</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Baud Rate</label>
+          <select id="deviceBaud" class="form-input">
+            <option value="9600">9600</option>
+            <option value="115200">115200</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Description (Optional)</label>
+          <textarea id="deviceDescription" rows="3" placeholder="Additional details about this monitoring station..." class="form-input"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="cancelModal">Cancel</button>
+        <button class="btn-primary" id="saveDevice">Save Device</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comparison Modal -->
+  <div class="modal" id="comparisonModal">
+    <div class="modal-content comparison-modal">
+      <div class="modal-header">
+        <h3>📊 Compare Devices</h3>
+        <button class="modal-close" id="closeComparison">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="device-selector" id="deviceSelector">
+          <!-- Device checkboxes will be added here -->
+        </div>
+        <div class="comparison-chart-container">
+          <canvas id="comparisonChart" width="600" height="300"></canvas>
+        </div>
+        <div class="comparison-stats" id="comparisonStats"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="exportComparison">📥 Export CSV</button>
+        <button class="btn-primary" id="refreshComparison">🔄 Refresh</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/script.js"></script>
+  
+  <!-- Keyboard shortcuts hint -->
+  <div class="shortcuts-hint" id="shortcutsHint">
+    <span>💡 Press <kbd>F</kbd> for fullscreen | <kbd>D</kbd> for dark/light mode | <kbd>M</kbd> for device menu</span>
+  </div>
+</body>
+</html>
